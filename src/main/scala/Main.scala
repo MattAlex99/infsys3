@@ -29,7 +29,7 @@ object Main {
     //println("DistinctAuthors by json/api: "+getQuerryManager.distinctAuthors("json","api"))
     //println("DistinctAuthors byjson/sql: "+getQuerryManager.distinctAuthors("json","sql"))
 
-    println("Most Articles by json/sql: "+getQuerryManager.mostArticles("parquet","api"))
+    println("Most Articles by parquet/sql: "+getQuerryManager.mostArticles("parquet","api").mkString(","))
 
     //keep web UI alive after execution
     System.in.read()
