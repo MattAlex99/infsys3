@@ -1,14 +1,7 @@
 import com.google.gson.Gson
-import org.apache.spark.sql.catalyst.ScalaReflection.Schema
-import org.apache.spark.sql.catalyst.dsl.expressions.windowSpec
-import org.apache.spark.sql.functions.{count, countDistinct}
 import org.apache.spark.sql.{Row, types}
 import org.apache.spark.sql.types.StringType
-import org.apache.spark.sql.expressions._
-
 import scala.annotation.tailrec
-import scala.collection.LinearSeq
-//import javassist.bytecode.SignatureAttribute.ArrayType
 import org.apache.spark.sql.functions.{col, explode}
 import org.apache.spark.sql.types.{ArrayType, LongType, StructType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -57,45 +50,47 @@ class GetQuerryManager {
         val schema = new StructType()
           .add("authors", ArrayType(new StructType().add("id", LongType).add("org",StringType).add("name",StringType)))
         val dataFrame = getDataframeWithSchema(schema, readMode)
-        //lets get a dataframe that lists all citations
+        //lets get a dataframe that lists all citations (article id to authorId,name,org)
         val dataFrameAuthors = dataFrame.select(explode(col("authors")).as("authors"))
         val dataFrameArticleToAuthors=dataFrameAuthors.select(col("authors.*"))
         val dataFrameGrouped =dataFrameArticleToAuthors.groupBy(col("id")).count()
         //get the list of all authors that have the highest count
         val highestValue=dataFrameGrouped.agg({"count"-> "max"}).collect()(0)
         val dataFrameHighestCountIDs= dataFrameGrouped.where("count=="+highestValue(0)).select(col("id"))
-        val columnOfMostId= dataFrameHighestCountIDs.collect()
-        val listOfAuthors= getListOfIdFromRowArray(columnOfMostId,0)
-
+        //val columnOfMostId= dataFrameHighestCountIDs.collect()
+        val listOfAuthors= getListOfIdFromRowArray(dataFrameHighestCountIDs.collect(),0)
+        //clean list with all citations so we have only one entry for each author
         val authorIdToInfoUnique = dataFrameArticleToAuthors.dropDuplicates("id")
+        //
         val resultDF= authorIdToInfoUnique.filter(col("id").isin(listOfAuthors:_*))
 
         return getListOfAuthorsFromRowArray(resultDF.collect())
 
       case "sql" =>
-        //val dataFrame = getDataframeWithoutSchema(readMode)
-        //dataFrame.show
-        //dataFrame.createTempView("completeData")
-        //val onlyAuthors = spark.sql(
-        //  """SELECT authors
-        //    |FROM  completeData
-        //  """.stripMargin)
-        //val dataFrameArticleToAuthors = onlyAuthors.select(col("authors.*"))
-        //dataFrameArticleToAuthors.createTempView("Authors")
-        //
-        ////change shit here
-        //val authorIDs = spark.sql(
-        //  """SELECT id FROM Authors
-        //    |GROUP BY id
-        //    |having count(id)=(SELECT MAX(article)
-        //    |FROM (
-        //    |SELECT id, COUNT(id) as article
-        //    |FROM Authors
-        //    |GROUP BY id))""".stripMargin).collect()
-        //val authorIDsString = authorIDs.mkString(", ")
-        //val authorArray = spark.sql("SELECT id , name , org FROM Authors WHERE id in (" + authorIDsString.substring(1, authorIDsString.length - 1) + ")").distinct().collect()
-        //rowArray2authorList(authorArray)
-        return List.apply()
+        //read a dataframe ...
+        val dataFrame = getDataframeWithoutSchema(readMode)
+        dataFrame.createTempView("completeData")
+        //... and transform it so that we get a table with columns id,name,org
+        val onlyAuthors = spark.sql(
+          """SELECT authors
+            |FROM  completeData
+          """.stripMargin)
+        val authorsExplodedDF = onlyAuthors.select(explode(col("authors")).as("authors"))
+        val authorCitationsDF = authorsExplodedDF.select(col("authors.*"))
+        //select all Ids of authors with the highest
+        authorCitationsDF.createTempView("Authors")
+        val authorIDs = spark.sql(
+          """SELECT id FROM Authors
+            |GROUP BY id
+            |having count(id)=(SELECT MAX(article)
+            |FROM (
+            |SELECT id, COUNT(id) as article
+            |FROM Authors
+            |GROUP BY id))""".stripMargin).collect()
+       //get the name and org for all authors with high score
+        val authorIDStrings = authorIDs.mkString(", ")
+        val authorArray = spark.sql("SELECT id , name , org FROM Authors WHERE id in (" + authorIDStrings.substring(1, authorIDStrings.length - 1) + ")").distinct().collect()
+        return getListOfAuthorsFromRowArray(authorArray)
     }
   }
 
@@ -144,7 +139,6 @@ class GetQuerryManager {
             return dataframeDistincts.count()
           case "sql" =>
             val dataFrame = getDataframeWithoutSchema(readMode)
-            dataFrame.show
             dataFrame.createTempView("completeData")
             val onlyArticles = spark.sql(
               """SELECT authors
@@ -152,7 +146,6 @@ class GetQuerryManager {
               """.stripMargin)
             onlyArticles.show()
             val articleIDTable=onlyArticles.select(explode(col("authors")("id")))
-            articleIDTable.show()
             articleIDTable.createTempView("unpackedAuthorIds")
             return spark.sql(
               """SELECT COUNT(DISTINCT col)

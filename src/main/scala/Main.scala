@@ -3,9 +3,9 @@ import org.apache.spark.sql.SparkSession
 object Main {
   def main(args: Array[String]): Unit = {
 
-    //create and fill db
-    val writingManager = new WritingManager
-    //Remove leading commas. Only need to be done once so it is comented out
+    //create and fill db. only needs to be done once
+    //val writingManager = new WritingManager
+    //Remove leading commas. Only need to be done once so it is commented out
     //writingManager.rewriteJsonFile()
 
     //writingManager.splitCompleteDS()
@@ -17,19 +17,29 @@ object Main {
 
 
     val getQuerryManager= new  GetQuerryManager
+
+    val timestamp0: Long = System.currentTimeMillis / 1000
+
     //println("count by json/api "+getQuerryManager.countArticle("json","api")) //takes 15.1 seconds
     //println("count by parquet/api: "+getQuerryManager.countArticle("parquet","api")) //takes 1.1 seconds
 
     //println("count by parquet/sql: "+getQuerryManager.countArticle("parquet","sql")) //takes 1.9 second
     //println("count by json/sql: "+getQuerryManager.countArticle("json","sql")) //takes 45 seconds
 
-    //println("DistinctAuthors by parquet/api: "+getQuerryManager.distinctAuthors("parquet","api")) //takes 20 seconds
-    //println("DistinctAuthors by parquet/sql: "+getQuerryManager.distinctAuthors("parquet","sql"))
+    println("DistinctAuthors by parquet/api: "+getQuerryManager.distinctAuthors("parquet","api")) //takes 23 seconds
+    //println("DistinctAuthors by parquet/sql: "+getQuerryManager.distinctAuthors("parquet","sql")) //28 seconds
 
-    //println("DistinctAuthors by json/api: "+getQuerryManager.distinctAuthors("json","api"))
-    //println("DistinctAuthors byjson/sql: "+getQuerryManager.distinctAuthors("json","sql"))
+    //println("DistinctAuthors by json/api: "+getQuerryManager.distinctAuthors("json","api")) //takes 55 seconds
+    //println("DistinctAuthors byjson/sql: "+getQuerryManager.distinctAuthors("json","sql")) //takes 84 seconds
 
-    println("Most Articles by parquet/sql: "+getQuerryManager.mostArticles("parquet","api").mkString(","))
+    //println("Most Articles by parquet/api: "+getQuerryManager.mostArticles("parquet","api").mkString(",")) //takes 54 seconds
+    //println("Most Articles by parquet/sql: "+getQuerryManager.mostArticles("parquet","sql").mkString(",")) //takes 27sec
+    //println("Most Articles by json/api: "+getQuerryManager.mostArticles("json","api").mkString(","))//takes 143 seconds
+    //println("Most Articles by json/sql: "+getQuerryManager.mostArticles("json","sql").mkString(",")) //takes 119 seconds
+
+    val timestamp1: Long = System.currentTimeMillis / 1000
+    print("operation took: ", timestamp1-timestamp0 , " seconds")
+
 
     //keep web UI alive after execution
     System.in.read()
