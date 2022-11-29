@@ -68,24 +68,21 @@ class GetQuerryManager {
 
       case "sql" =>
         //read a dataframe ...
-        val dataFrame = getDataframeWithoutSchema(readMode)
-        dataFrame.createTempView("completeData")
+        val schema = new StructType()
+          .add("authors", ArrayType(new StructType().add("id", LongType).add("org", StringType).add("name", StringType)))
+        val dataFrame = getDataframeWithSchema(schema, readMode)
         //... and transform it so that we get a table with columns id,name,org
-        val onlyAuthors = spark.sql(
-          """SELECT authors
-            |FROM  completeData
-          """.stripMargin)
-        val authorsExplodedDF = onlyAuthors.select(explode(col("authors")).as("authors"))
+        val authorsExplodedDF = dataFrame.select(explode(col("authors")).as("authors"))
         val authorCitationsDF = authorsExplodedDF.select(col("authors.*"))
         //select all Ids of authors with the highest
-        authorCitationsDF.createTempView("Authors")
+        authorCitationsDF.createTempView("AuthorCitations")
         val authorIDs = spark.sql(
-          """SELECT id FROM Authors
+          """SELECT id FROM AuthorCitations
             |GROUP BY id
             |having count(id)=(SELECT MAX(article)
             |FROM (
             |SELECT id, COUNT(id) as article
-            |FROM Authors
+            |FROM AuthorCitations
             |GROUP BY id))""".stripMargin).collect()
        //get the name and org for all authors with high score
         val authorIDStrings = authorIDs.mkString(", ")
@@ -138,14 +135,11 @@ class GetQuerryManager {
             val dataframeDistincts = dataFrameAuthors.distinct()
             return dataframeDistincts.count()
           case "sql" =>
-            val dataFrame = getDataframeWithoutSchema(readMode)
-            dataFrame.createTempView("completeData")
-            val onlyArticles = spark.sql(
-              """SELECT authors
-                  |FROM  completeData
-              """.stripMargin)
-            onlyArticles.show()
-            val articleIDTable=onlyArticles.select(explode(col("authors")("id")))
+            val schema = new StructType()
+              .add("authors", ArrayType(new StructType().add("id", LongType)))
+            val dataFrame = getDataframeWithSchema(schema, readMode)
+            val articleIDTable=dataFrame.select(explode(col("authors")("id")))
+
             articleIDTable.createTempView("unpackedAuthorIds")
             return spark.sql(
               """SELECT COUNT(DISTINCT col)
@@ -163,22 +157,22 @@ class GetQuerryManager {
         val dataFrame = getDataframeWithSchema(schema,readMode)
         return dataFrame.select(col("id")).count()
 
-      case "sql" => val tableName = "articlesParquetSql"
-        val dataFrame = getDataframeWithoutSchema(readMode)
+      case "sql" =>
+        val tableName = "articlesParquetSql"
+        val schema = new StructType().add("id", LongType, false)
+        val dataFrame = getDataframeWithSchema(schema, readMode)
         dataFrame.createTempView(tableName)
-        return getCountWithSQL(tableName)
+        return spark.sql(
+          ("""
+             |SELECT COUNT (id)
+             |FROM """ + tableName).stripMargin).take(1)(0).getAs[Long](0)
+
     }
   }
 
 
 
-def getCountWithSQL(tableName:String):Long={
-  val result= spark.sql(
-    ("""
-      |SELECT COUNT (id)
-      |FROM """ + tableName).stripMargin).take(1)(0).getAs[Long](0)
-  return result
-}
+
 
 
 
