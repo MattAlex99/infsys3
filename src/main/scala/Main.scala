@@ -17,7 +17,7 @@ object Main {
 
 
     val getQuerryManager= new  GetQuerryManager
-
+    getQuerryManager.spark.sparkContext.setLogLevel("error")
     val timestamp0: Long = System.currentTimeMillis / 1000
 
     //println("count by parquet/api: "+getQuerryManager.countArticle("parquet","api")) //takes 1.1/6 seconds
@@ -30,10 +30,10 @@ object Main {
     //println("DistinctAuthors by json/api: "+getQuerryManager.distinctAuthors("json","api")) //takes 55 seconds
     //println("DistinctAuthors byjson/sql: "+getQuerryManager.distinctAuthors("json","sql")) //takes 57 seconds
 
-    //println("Most Articles by parquet/api: "+getQuerryManager.mostArticles("parquet","api").mkString(",")) //takes 54 seconds
-    //println("Most Articles by parquet/sql: "+getQuerryManager.mostArticles("parquet","sql").mkString(",")) //takes 40sec
+    println("Most Articles by parquet/api: "+getQuerryManager.mostArticles("parquet","api").mkString(",")) //takes 54 seconds
+    //println("Most Articles by parquet/sql: "+getQuerryManager.mostArticles("parquet","sql").mkString(",")) //takes 68sec
     //println("Most Articles by json/api: "+getQuerryManager.mostArticles("json","api").mkString(","))//takes 143 seconds
-    //println("Most Articles by json/sql: "+getQuerryManager.mostArticles("json","sql").mkString(",")) //takes 108 seconds
+    //println("Most Articles by json/sql: "+getQuerryManager.mostArticles("json","sql").mkString(",")) //takes 135 seconds
 
     val timestamp1: Long = System.currentTimeMillis / 1000
     print("operation took: ", timestamp1-timestamp0 , " seconds")

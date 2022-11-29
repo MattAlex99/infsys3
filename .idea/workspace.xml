@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a2ad3224-c8e9-443a-bbf4-cfb2d483bec4" name="Changes" comment="vorläufig fertig. SQL dauert bei mir noch länger als api, wass merkwürdig ist.">
+    <list default="true" id="a2ad3224-c8e9-443a-bbf4-cfb2d483bec4" name="Changes" comment="nach ersten benchmark. Alles funktioniert, verbesserungen möglich">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/scala/GetQuerryManager.scala" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/scala/GetQuerryManager.scala" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/scala/Main.scala" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/scala/Main.scala" afterDir="false" />
@@ -98,7 +98,7 @@
       <workItem from="1669274364736" duration="4363000" />
       <workItem from="1669285464522" duration="910000" />
       <workItem from="1669295188755" duration="1811000" />
-      <workItem from="1669712084311" duration="2212000" />
+      <workItem from="1669712084311" duration="7148000" />
     </task>
     <task id="LOCAL-00001" summary="initial commit">
       <created>1669212984761</created>
@@ -128,7 +128,14 @@
       <option name="project" value="LOCAL" />
       <updated>1669277847514</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="nach ersten benchmark. Alles funktioniert, verbesserungen möglich">
+      <created>1669715816385</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1669715816385</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -155,7 +162,8 @@
     <MESSAGE value="initial commit" />
     <MESSAGE value="nur sql anpassungen notwendig" />
     <MESSAGE value="vorläufig fertig. SQL dauert bei mir noch länger als api, wass merkwürdig ist." />
-    <option name="LAST_COMMIT_MESSAGE" value="vorläufig fertig. SQL dauert bei mir noch länger als api, wass merkwürdig ist." />
+    <MESSAGE value="nach ersten benchmark. Alles funktioniert, verbesserungen möglich" />
+    <option name="LAST_COMMIT_MESSAGE" value="nach ersten benchmark. Alles funktioniert, verbesserungen möglich" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

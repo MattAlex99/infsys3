@@ -27,22 +27,7 @@ class GetQuerryManager {
     }
   }
 
-  def getDataframe(query:String,readMode:String,computationMode:String):DataFrame={
-    if (computationMode=="sql" ){
-      return  getDataframeWithoutSchema(readMode)
-    }
-    query match {
-      case "distinctAuthors" =>
-        val schema = new StructType()
-          .add("authors", ArrayType(new StructType().add("id", LongType)))
-        return getDataframeWithSchema(schema, readMode)
-      case "countArticle" =>
-        val schema = new StructType().add("id", LongType, false)
-        return getDataframeWithSchema(schema, readMode)
-    }
 
-
-  }
 
   def mostArticles(readMode:String,computationMode:String): List[Author] ={
     computationMode match {
@@ -51,19 +36,26 @@ class GetQuerryManager {
           .add("authors", ArrayType(new StructType().add("id", LongType).add("org",StringType).add("name",StringType)))
         val dataFrame = getDataframeWithSchema(schema, readMode)
         //lets get a dataframe that lists all citations (article id to authorId,name,org)
-        val dataFrameAuthors = dataFrame.select(explode(col("authors")).as("authors"))
-        val dataFrameArticleToAuthors=dataFrameAuthors.select(col("authors.*"))
-        val dataFrameGrouped =dataFrameArticleToAuthors.groupBy(col("id")).count()
-        //get the list of all authors that have the highest count
-        val highestValue=dataFrameGrouped.agg({"count"-> "max"}).collect()(0)
-        val dataFrameHighestCountIDs= dataFrameGrouped.where("count=="+highestValue(0)).select(col("id"))
-        //val columnOfMostId= dataFrameHighestCountIDs.collect()
-        val listOfAuthors= getListOfIdFromRowArray(dataFrameHighestCountIDs.collect(),0)
-        //clean list with all citations so we have only one entry for each author
-        val authorIdToInfoUnique = dataFrameArticleToAuthors.dropDuplicates("id")
-        //
-        val resultDF= authorIdToInfoUnique.filter(col("id").isin(listOfAuthors:_*))
+        val dataFrameAuthors = dataFrame.
+          select(explode(col("authors")).as("authors"))
+        val dataFrameArticleToAuthors=dataFrameAuthors
+          .select(col("authors.*"))
+        val dataFrameGrouped =dataFrameArticleToAuthors
+          .groupBy(col("id")).count()
 
+        //get the list of all authors that have the highest count
+        val highestValue=dataFrameGrouped.
+          agg({"count"-> "max"}).collect()(0)
+        val dataFrameHighestCountIDs= dataFrameGrouped.
+          where("count=="+highestValue(0)).select(col("id"))
+        val listOfAuthors= getListOfIdFromRowArray(dataFrameHighestCountIDs.collect(),0)
+
+        //clean list with all citations so we have only one entry for each author
+        val authorIdToInfoUnique = dataFrameArticleToAuthors.
+          dropDuplicates("id")
+
+        val resultDF= authorIdToInfoUnique.
+          filter(col("id").isin(listOfAuthors:_*))
         return getListOfAuthorsFromRowArray(resultDF.collect())
 
       case "sql" =>
@@ -77,52 +69,34 @@ class GetQuerryManager {
         //select all Ids of authors with the highest
         authorCitationsDF.createTempView("AuthorCitations")
         val authorIDs = spark.sql(
-          """SELECT id FROM AuthorCitations
-            |GROUP BY id
-            |having count(id)=(SELECT MAX(article)
-            |FROM (
-            |SELECT id, COUNT(id) as article
-            |FROM AuthorCitations
-            |GROUP BY id))""".stripMargin).collect()
+          """Select id ,Min(name),Min(org) FROM (
+              |SELECT id , name , org FROM AuthorCitations WHERE id in (
+              |SELECT distinct id FROM AuthorCitations
+              |GROUP BY id
+              |having count(id)=(SELECT MAX(article)
+              |FROM (
+                |SELECT id, COUNT(id) as article
+              |FROM AuthorCitations
+              |GROUP BY id)))
+              |) GROUP BY id""".stripMargin).collect()
        //get the name and org for all authors with high score
         val authorIDStrings = authorIDs.mkString(", ")
-        val authorArray = spark.sql("SELECT id , name , org FROM Authors WHERE id in (" + authorIDStrings.substring(1, authorIDStrings.length - 1) + ")").distinct().collect()
-        return getListOfAuthorsFromRowArray(authorArray)
+        print(authorIDStrings)
+        val result = getListOfAuthorsFromRowArray(authorIDs)
+        return result
     }
   }
 
 
   def getListOfIdFromRowArray(inputArray:Array[Row], iter:Integer=0, resultList:List[Long]=List()):List[Long]={
-    iter>=inputArray.length match {
-      case true => return resultList
-      case false =>
-        val localRow=inputArray(iter)
-        val newLong=localRow.getAs("id").asInstanceOf[Long]
-        return getListOfIdFromRowArray(inputArray,iter+1,resultList:+newLong):List[Long]
-
-    }
+    return inputArray.map(entry => entry.getAs("id").asInstanceOf[Long] ).toList
   }
 
 
-  @tailrec
-  final def getListOfAuthorsFromRowArray(inputArray: Array[Row], iter: Integer=0, resultList: List[Author] = List()): List[Author] = {
-    iter >= inputArray.length match {
-      case false =>
-        val localRow = inputArray(iter)
-        val newAuthor = Author (
-          localRow.getAs("id").asInstanceOf[Long],
-          localRow.getAs("name").asInstanceOf[String],
-          localRow.getAs("org").asInstanceOf[String])
-          return getListOfAuthorsFromRowArray(inputArray, iter + 1, resultList :+ newAuthor)
-      case true => return resultList
-    }
-  }
-  def getAutorFromIdAndDF(id:Int,df:DataFrame):Author={
-    val localRow=df.where("id=="+id).collect()(0)
-    return Author(localRow.getAs("id").asInstanceOf[Long],
-      localRow.getAs("name").asInstanceOf[String],
-      localRow.getAs("org").asInstanceOf[String])
-
+  final def getListOfAuthorsFromRowArray(inputArray: Array[Row]): List[Author] = {
+    return inputArray.map(entry => Author(entry.get(0).asInstanceOf[Long],
+      entry.get(1).asInstanceOf[String],
+      entry.get(2).asInstanceOf[String])).toList
   }
 
   def distinctAuthors(readMode:String,computationMode:String): Long = {
